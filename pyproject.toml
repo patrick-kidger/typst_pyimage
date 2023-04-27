@@ -1,0 +1,36 @@
+[project]
+name = "typst_pyimage"
+description = "Typst extension, adding support for generating figures using inline Python code"
+readme = "README.md"
+requires-python = "~=3.8"
+license = {file = "LICENSE"}
+authors = [
+  {name = "Patrick Kidger", email = "contact@kidger.site"},
+]
+keywords = ["typst", "matplotlib", "plotting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+]
+urls = {repository = "https://github.com/patrick-kidger/typst_pyimage"}
+dependencies = ["matplotlib>=3.7.1"]
+dynamic = ["version"]
+
+[tool.setuptools]
+packages = ["typst_pyimage"]
+dynamic = {version = {attr = "typst_pyimage.__version__"}}
+
+[tool.ruff]
+select = ["E", "F", "I001"]
+ignore = ["E402", "E721", "E731", "E741", "F722"]
+ignore-init-module-imports = true
+
+[tool.ruff.isort]
+combine-as-imports = true
+lines-after-imports = 2
+extra-standard-library = ["typing_extensions"]
+order-by-type = false

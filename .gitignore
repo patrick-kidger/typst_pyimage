@@ -1,0 +1,6 @@
+**/__pycache__
+**/.typst_pyimage
+*.egg-info/
+build/
+dist/
+examples/*.pdf
