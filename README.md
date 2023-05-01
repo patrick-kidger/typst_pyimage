@@ -4,7 +4,7 @@
 
 ## Example
 
-<img align="right" width="45%" src="./imgs/lotka_volterra.png">
+<img align="right" width="45%" src="https://raw.githubusercontent.com/patrick-kidger/typst_pyimage/main/imgs/lotka_volterra.png">
 
 ```typst
 #import ".typst_pyimage/pyimage.typ": pyimage
@@ -69,6 +69,12 @@ This requires that you're using Typst locally -- it won't work with the web app.
     This will extract and run all your Python code. In addition it will call either `typst compile your_file.typ` or `typst watch your_file.typ`.
 
     The resulting images are saved in the `.typst_pyimage` folder.
+
+## Notes
+
+It's common to have an initial block of code that is in common to all `#pyimage("...")` calls (such as import statements). These can be placed in a `#pyimageinit("...")` directive; any code here will be automatically prepended to all `#pyimage` invocations.
+
+Each `#pyimage("...")` block is executed as a fresh module, but with the same Python interpreter. This means that e.g. any global caches will be shared across all invocations. (Useful when using a library like JAX, which has a JIT compilation cache.)
 
 ## Limitations
 

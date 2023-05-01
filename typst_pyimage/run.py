@@ -10,39 +10,68 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
-regex = re.compile(r"pyimage\(\s*\"([^\"]*)\"")
+pyimage_re = re.compile(r"pyimage\(\s*\"([^\"]*)\"")
+pyimageinit_re = re.compile(r"pyimageinit\(\s*\"([^\"]*)\"")
+
+
+def _malformed_fig(msg: str):
+    fig, ax = plt.subplots()
+    ax.text(
+        0.5,
+        0.5,
+        f"Malformed: {msg}",
+        horizontalalignment="center",
+        verticalalignment="center",
+    )
+    return fig
+
+
+def _make_fig(code: str):
+    plt.figure()  # Don't overwrite our current figure.
+    try:
+        with matplotlib.rc_context():
+            exec(code, {})
+    except Exception as e:
+        fig = _malformed_fig(str(e))
+    else:
+        # Not the plt.figure() from above, just in case the code creates a new figure.
+        fig = plt.gcf()
+    return fig
 
 
 def _make_images(
     filepath: pathlib.Path, dirpath: pathlib.Path, figcache: Optional[dict]
 ) -> None:
+    for file in dirpath.iterdir():
+        if file.name.endswith(".png"):
+            file.unlink()
     with open(filepath) as f:
         contents = f.read()
-    for i, match in enumerate(regex.finditer(contents)):
-        i = i + 1
-        [code] = match.groups()
-        code = textwrap.dedent(code).strip()
-        try:
+    inits = list(pyimageinit_re.finditer(contents))
+    if len(inits) == 0:
+        init_code = ""
+        multiple_inits = False
+    elif len(inits) == 1:
+        [init_code] = inits[0].groups()
+        init_code = textwrap.dedent(init_code).strip()
+        multiple_inits = False
+    else:
+        multiple_inits = True
+    for i, match in enumerate(pyimage_re.finditer(contents)):
+        if multiple_inits:
+            fig = _malformed_fig("Cannot have multiple #pyimageinit directives")
+        else:
+            i = i + 1
+            [code] = match.groups()
+            code = textwrap.dedent(code).strip()
+            code = init_code + "\n" + code  # pyright: ignore
             if figcache is None:
-                raise KeyError
+                fig = _make_fig(code)
             else:
-                fig = figcache[code]
-        except KeyError:
-            plt.figure()
-            try:
-                with matplotlib.rc_context():
-                    exec(code, {}, {})
-            except Exception:
-                fig, ax = plt.subplots()
-                ax.text(
-                    0.5,
-                    0.5,
-                    "Malformed",
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                )
-            else:
-                fig = plt.gcf()
+                try:
+                    fig = figcache[code]
+                except KeyError:
+                    fig = _make_fig(code)
         fig.savefig(dirpath / f"{i}.png")
 
 
