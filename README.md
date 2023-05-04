@@ -59,7 +59,7 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 1. Import `pyimage.typ`. At the start of your `.typ` file, add the line `#import ".typst_pyimage/pyimage.typ": pyimage`.
 
-2. Use the `pyimage` function. This has syntax `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forward on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
+2. Use the `pyimage` function. This has syntax `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
 
 3. Compile or watch. Run either of the following two commands:
     ```
@@ -72,9 +72,29 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 ## Notes
 
-It's common to have an initial block of code that is in common to all `#pyimage("...")` calls (such as import statements). These can be placed in a `#pyimageinit("...")` directive; any code here will be automatically prepended to all `#pyimage` invocations.
+It's common to have an initial block of code that is in common to all `#pyimage("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyimageinit("...")` directive.
 
-Each `#pyimage("...")` block is executed as a fresh module, but with the same Python interpreter. This means that e.g. any global caches will be shared across all invocations. (Useful when using a library like JAX, which has a JIT compilation cache.)
+Each `#pyimage("...")` block is executed as a fresh module (i.e. as if each was a separate Python file), but with the same Python interpreter.
+
+Overall, this is essentially equivalent to the following Python code:
+```
+# main.py
+import pyimageinit
+import pyimage1
+import pyimage2
+
+# pyimageinit.py
+...  # your #pyimageinit("...") code
+
+# pyimage1.py
+from pyimageinit import *
+...  # your first #pyimage("...") code
+
+# pyimage2.py
+from pyimageinit import *
+...  # your second #pyimage("...") code
+```
+This means that e.g. any global caches will be shared across all `#pyimage("...")` calls. (Useful when using a library like JAX, which has a JIT compilation cache.)
 
 ## Limitations
 
