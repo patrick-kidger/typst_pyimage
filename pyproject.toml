@@ -19,7 +19,6 @@ classifiers = [
 ]
 urls = {repository = "https://github.com/patrick-kidger/typst_pyimage"}
 dependencies = ["matplotlib>=3.7.1"]
-dynamic = ["version"]
 
 [build-system]
 requires = ["hatchling"]
