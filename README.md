@@ -1,6 +1,6 @@
 <h1 align="center">typst_pyimage</h1>
 
-<p align="center">Wraps <a href="https://github.com/typst/typst">Typst</a> to support inline Python code for generating figures.</p>
+<p align="center">Wraps <a href="https://github.com/typst/typst">Typst</a> to support inline Python code for generating content and figures.</p>
 
 ## Example
 
@@ -57,9 +57,15 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 ## Usage
 
-1. Import `pyimage.typ`. At the start of your `.typ` file, add the line `#import ".typst_pyimage/pyimage.typ": pyimage`.
+1. Import `pyimage.typ`. At the start of your `.typ` file, add the line `#import ".typst_pyimage/pyimage.typ": pyimage, pycontent, pyinit`.
 
-2. Use the `pyimage` function. This has syntax `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
+2. Use these functions.
+
+    a. `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
+
+    b. `pycontent(string)`. The positional string should be a Python program that produces a string on its final line. This will be treated as Typst code.
+
+    c. `pyinit(string)`. The positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to do import or perform setup.
 
 3. Compile or watch. Run either of the following two commands:
     ```
@@ -72,33 +78,33 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 ## Notes
 
-It's common to have an initial block of code that is in common to all `#pyimage("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyimageinit("...")` directive.
+It's common to have an initial block of code that is in common to all `#pyimage("...")` and `#pycontent("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyinit("...")` directive.
 
 Each `#pyimage("...")` block is executed as a fresh module (i.e. as if each was a separate Python file), but with the same Python interpreter.
 
 Overall, this is essentially equivalent to the following Python code:
 ```
 # main.py
-import pyimageinit
+import pyinit
 import pyimage1
 import pyimage2
 
-# pyimageinit.py
-...  # your #pyimageinit("...") code
+# pyinit.py
+...  # your #pyinit("...") code
 
 # pyimage1.py
-from pyimageinit import *
+from pyinit import *
 ...  # your first #pyimage("...") code
 
 # pyimage2.py
-from pyimageinit import *
+from pyinit import *
 ...  # your second #pyimage("...") code
 ```
 This means that e.g. any global caches will be shared across all `#pyimage("...")` calls. (Useful when using a library like JAX, which has a JIT compilation cache.)
 
 ## Limitations
 
-1. The watcher just extracts all the `pyimage("...")` blocks via regex, and runs them in the order that they appear in the file. This means that (a) the `"` character may not appear anywhere in the Python code (even if escaped), and (b) trying to call `pyimage` dynamically (i.e. not with a literal string at the top level of your program) will not work.
-2. Only `pyimage("...")` calls inside the single watched file are tracked.
+1. The watcher just extracts all the `pyimage("...")` etc. blocks via regex, and runs them in the order that they appear in the file. This means that (a) the `"` character may not appear anywhere in the Python code (even if escaped), and (b) trying to call `pyimage` etc. dynamically (i.e. not with a literal string at the top level of your program) will not work.
+2. Only `pyimage("...")` etc. calls inside the single watched file are tracked.
 
 We could probably lift 1a and 2 with a bit of effort. PRs welcome.

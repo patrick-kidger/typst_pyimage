@@ -10,8 +10,9 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 
+pyinit_re = re.compile(r"pyinit\(\s*\"([^\"]*)\"")
 pyimage_re = re.compile(r"pyimage\(\s*\"([^\"]*)\"")
-pyimageinit_re = re.compile(r"pyimageinit\(\s*\"([^\"]*)\"")
+pycontent_re = re.compile(r"pycontent\(\s*\"([^\"]*)\"")
 
 
 def _malformed_fig(msg: str):
@@ -40,19 +41,37 @@ def _make_fig(code: str, scope: dict):
     return fig
 
 
+def _make_content(code: str, scope: dict) -> str:
+    code_pieces = code.rsplit("\n", 1)
+    if len(code_pieces) == 1:
+        code = "out = " + code
+    else:
+        code, last_line = code_pieces
+        last_line = "out = " + last_line
+        code = code + "\n" + last_line
+    scope = dict(scope)
+    try:
+        exec(code, scope)
+    except Exception as e:
+        return str(e)
+    else:
+        return scope["out"]
+
+
 def _make_images(
     filepath: pathlib.Path,
     dirpath: pathlib.Path,
     figcache: Optional[dict],
+    contentcache: Optional[dict],
     last_init_code: str,
     last_init_scope: dict,
 ) -> Tuple[str, dict]:
     for file in dirpath.iterdir():
-        if file.name.endswith(".png"):
+        if file.name.endswith(".png") or file.name.endswith(".txt"):
             file.unlink()
     with open(filepath) as f:
         contents = f.read()
-    inits = list(pyimageinit_re.finditer(contents))
+    inits = list(pyinit_re.finditer(contents))
     if len(inits) == 0:
         malformed = False
         init_code = ""
@@ -73,19 +92,19 @@ def _make_images(
                 exec(init_code, init_scope)
             except Exception as e:
                 malformed = True
-                malformed_msg = "In pyimageinit: " + str(e)
+                malformed_msg = "In pyinit: " + str(e)
     else:
         malformed = True
-        malformed_msg = "Cannot have multiple #pyimageinit directives"
+        malformed_msg = "Cannot have multiple #pyinit directives"
         init_code = ""
         init_scope = {}
         figcache = {}  # needed in case we go 1->2->0 number of pyimageinits
-    for i, match in enumerate(pyimage_re.finditer(contents)):
+    for i, image_match in enumerate(pyimage_re.finditer(contents)):
+        i = i + 1
         if malformed:
             fig = _malformed_fig(malformed_msg)  # pyright: ignore
         else:
-            i = i + 1
-            [code] = match.groups()
+            [code] = image_match.groups()
             code = textwrap.dedent(code).strip()
             if figcache is None:
                 fig = _make_fig(code, init_scope)
@@ -95,6 +114,23 @@ def _make_images(
                 except KeyError:
                     fig = _make_fig(code, init_scope)
         fig.savefig(dirpath / f"{i}.png")
+    for i, image_match in enumerate(pycontent_re.finditer(contents)):
+        i = i + 1
+        if malformed:
+            out = malformed_msg  # pyright: ignore
+        else:
+            [code] = image_match.groups()
+            code = textwrap.dedent(code).strip()
+            if contentcache is None:
+                out = _make_content(code, init_scope)
+            else:
+                try:
+                    out = contentcache[code]
+                except KeyError:
+                    out = _make_content(code, init_scope)
+        out = '"' + out + '"'
+        with open(dirpath / f"{i}.txt", "w") as f:
+            f.write(out)
     return init_code, init_scope
 
 
@@ -102,19 +138,28 @@ def _get_file_time(filepath: pathlib.Path) -> int:
     return filepath.stat().st_mtime_ns
 
 
-def _initial(filename: Union[str, pathlib.Path], figcache: Optional[dict]):
+def _initial(
+    filename: Union[str, pathlib.Path],
+    figcache: Optional[dict],
+    contentcache: Optional[dict],
+):
     installpath = pathlib.Path(__file__).resolve().parent
     filepath = pathlib.Path(filename).resolve()
     dirpath = filepath.parent / ".typst_pyimage"
     dirpath.mkdir(exist_ok=True)
     shutil.copy(installpath / "pyimage.typ", dirpath / "pyimage.typ")
-    init_code, init_scope = _make_images(filepath, dirpath, figcache, "", {})
+    init_code, init_scope = _make_images(
+        filepath, dirpath, figcache, contentcache, "", {}
+    )
     return filepath, dirpath, init_code, init_scope
 
 
 def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
     figcache = {}
-    filepath, dirpath, init_code, init_scope = _initial(filename, figcache)
+    contentcache = {}
+    filepath, dirpath, init_code, init_scope = _initial(
+        filename, contentcache, figcache
+    )
     del filename
     start_time = time.time()
     file_time = last_time = _get_file_time(filepath)
@@ -126,7 +171,7 @@ def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
             if need_update:
                 last_time = file_time
                 init_code, init_scope = _make_images(
-                    filepath, dirpath, figcache, init_code, init_scope
+                    filepath, dirpath, figcache, contentcache, init_code, init_scope
                 )
             time.sleep(0.1)
             file_time = _get_file_time(filepath)
@@ -140,5 +185,5 @@ def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
 
 
 def compile(filename: Union[str, pathlib.Path]):
-    filepath, _, _, _ = _initial(filename, figcache=None)
+    filepath, _, _, _ = _initial(filename, figcache=None, contentcache=None)
     subprocess.run(["typst", "compile", str(filepath)])

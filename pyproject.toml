@@ -1,6 +1,6 @@
 [project]
 name = "typst_pyimage"
-version = "0.0.2"
+version = "0.0.3"
 description = "Typst extension, adding support for generating figures using inline Python code"
 readme = "README.md"
 requires-python = "~=3.8"
