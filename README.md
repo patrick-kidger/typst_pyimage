@@ -63,9 +63,9 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
     a. `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
 
-    b. `pycontent(string)`. The positional string should be a Python program that produces a string on its final line. This will be treated as Typst code.
+    b. `pycontent(string)`. The positional string should be a Python program that produces a string on its final line. This string will be treated as Typst code.
 
-    c. `pyinit(string)`. The positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to do import or perform setup.
+    c. `pyinit(string)`. The positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup.
 
 3. Compile or watch. Run either of the following two commands:
     ```
