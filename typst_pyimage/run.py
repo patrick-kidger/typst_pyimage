@@ -9,7 +9,6 @@ from typing import Optional, Tuple, Union
 import matplotlib
 import matplotlib.pyplot as plt
 
-
 pyinit_re = re.compile(r"pyinit\(\s*\"([^\"]*)\"")
 pyimage_re = re.compile(r"pyimage\(\s*\"([^\"]*)\"")
 pycontent_re = re.compile(r"pycontent\(\s*\"([^\"]*)\"")
@@ -148,18 +147,14 @@ def _initial(
     dirpath = filepath.parent / ".typst_pyimage"
     dirpath.mkdir(exist_ok=True)
     shutil.copy(installpath / "pyimage.typ", dirpath / "pyimage.typ")
-    init_code, init_scope = _make_images(
-        filepath, dirpath, figcache, contentcache, "", {}
-    )
+    init_code, init_scope = _make_images(filepath, dirpath, figcache, contentcache, "", {})
     return filepath, dirpath, init_code, init_scope
 
 
 def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
     figcache = {}
     contentcache = {}
-    filepath, dirpath, init_code, init_scope = _initial(
-        filename, contentcache, figcache
-    )
+    filepath, dirpath, init_code, init_scope = _initial(filename, contentcache, figcache)
     del filename
     start_time = time.time()
     file_time = last_time = _get_file_time(filepath)
@@ -170,9 +165,7 @@ def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
         while keep_running:
             if need_update:
                 last_time = file_time
-                init_code, init_scope = _make_images(
-                    filepath, dirpath, figcache, contentcache, init_code, init_scope
-                )
+                init_code, init_scope = _make_images(filepath, dirpath, figcache, contentcache, init_code, init_scope)
             time.sleep(0.1)
             file_time = _get_file_time(filepath)
             need_update = file_time > last_time
