@@ -7,7 +7,7 @@ from .run import watch as watch
 # Create the parser
 parser = argparse.ArgumentParser(
     prog="typst_pyimage",
-    description="Typst extension, adding support for generating figures using inline Python code",
+    description="Typst extension, adding support for generating figures using inline Python code.",
 )
 
 # Required positional argument
