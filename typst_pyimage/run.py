@@ -151,7 +151,7 @@ def _initial(
     return filepath, dirpath, init_code, init_scope
 
 
-def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
+def watch(filename: Union[str, pathlib.Path], extra_args: list[str] = [], timeout_s: Optional[int] = None):
     figcache = {}
     contentcache = {}
     filepath, dirpath, init_code, init_scope = _initial(filename, contentcache, figcache)
@@ -160,7 +160,7 @@ def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
     file_time = last_time = _get_file_time(filepath)
     keep_running = True
     need_update = False
-    process = subprocess.Popen(["typst", "watch", str(filepath)])
+    process = subprocess.Popen(["typst", "watch"] + extra_args + [str(filepath)])
     try:
         while keep_running:
             if need_update:
@@ -177,6 +177,6 @@ def watch(filename: Union[str, pathlib.Path], timeout_s: Optional[int] = None):
         process.kill()
 
 
-def compile(filename: Union[str, pathlib.Path]):
+def compile(filename: Union[str, pathlib.Path], extra_args: list[str] = []):
     filepath, _, _, _ = _initial(filename, figcache=None, contentcache=None)
-    subprocess.run(["typst", "compile", str(filepath)])
+    subprocess.run(["typst", "compile"] + extra_args + [str(filepath)])
