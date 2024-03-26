@@ -78,6 +78,8 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
    The resulting images are saved in the `.typst_pyimage` folder.
 
+   For more information on the available arguments, run `python -m typst_pyimage -h`.
+
 ## Notes
 
 It's common to have an initial block of code that is in common to all `#pyimage("...")` and `#pycontent("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyinit("...")` directive.
