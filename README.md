@@ -70,8 +70,8 @@ This requires that you're using Typst locally -- it won't work with the web app.
 3. Compile or watch. Run either of the following two commands:
 
    ```
-   python -m typst_pyimage --compile your_file.typ
-   python -m typst_pyimage --watch your_file.typ
+   python -m typst_pyimage compile your_file.typ
+   python -m typst_pyimage watch your_file.typ
    ```
 
    This will extract and run all your Python code. In addition it will call either `typst compile your_file.typ` or `typst watch your_file.typ`.

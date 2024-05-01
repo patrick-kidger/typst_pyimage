@@ -4,25 +4,64 @@ import os
 from .run import compile as compile
 from .run import watch as watch
 
+
+def parse_args(args):
+    filepath = args.filepath
+
+    # Check if the file exists
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File '{filepath}' not found")
+
+    extra_args = args.extra_args.replace("~", os.path.expanduser("~")).split()
+
+    return filepath, extra_args
+
+
+def _compile_wrapper(args):
+    try:
+        filepath, extra_args = parse_args(args)
+    except Exception as e:
+        print(e)
+        return
+
+    compile(filepath, extra_args)
+
+
+def _watch_wrapper(args):
+    try:
+        filepath, extra_args = parse_args(args)
+    except Exception as e:
+        print(e)
+        return
+
+    watch(filepath, extra_args)
+
+
 # Create the parser
 parser = argparse.ArgumentParser(
     prog="typst_pyimage",
     description="Typst extension, adding support for generating figures using inline Python code.",
 )
 
+# Create subparsers
+subparser = parser.add_subparsers(help="sub-command help")
+
+# Create subparsers for the subcommands
+subparser_compile = subparser.add_parser("compile", aliases=["c"], help="Compile the typst file")
+subparser_watch = subparser.add_parser("watch", aliases=["w"], help="Watch the typst file")
+
+# Set the subparsers to call the appropriate function
+subparser_compile.set_defaults(func=_compile_wrapper)
+subparser_watch.set_defaults(func=_watch_wrapper)
+
 # Required positional argument
 parser.add_argument(
     "filepath",
     action="store",
     type=str,
+    default=".",
     help="The path to the typst file to be compiled/watched",
 )
-
-# Boolean flags
-# The user can only choose one of these flags at a time
-group = parser.add_mutually_exclusive_group()
-group.add_argument("-c", "--compile", action="store_false", help="Compile the typst file")
-group.add_argument("-w", "--watch", action="store_false", help="Watch the typst file")
 
 # Optional argument
 parser.add_argument(
@@ -34,13 +73,4 @@ parser.add_argument(
 
 # Parse the arguments
 args = parser.parse_args()
-
-filepath = args.filepath
-do_compile = args.compile
-do_watch = args.watch
-extra_args = args.extra_args.replace("~", os.path.expanduser("~")).split()
-
-if do_compile:
-    watch(filepath, extra_args)
-elif do_watch:
-    compile(filepath, extra_args)
+args.func(args)
