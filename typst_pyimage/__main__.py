@@ -1,8 +1,7 @@
 import argparse
 import os
 
-from .run import compile as compile
-from .run import watch as watch
+from .run import compile as compile, watch as watch
 
 
 def parse_args(args):
@@ -37,18 +36,28 @@ def _watch_wrapper(args):
     watch(filepath, extra_args)
 
 
+program_description = (
+    "Typst extension, adding support for generating"
+    + " figures using inline Python code."
+)
+
+
 # Create the parser
 parser = argparse.ArgumentParser(
     prog="typst_pyimage",
-    description="Typst extension, adding support for generating figures using inline Python code.",
+    description=program_description,
 )
 
 # Create subparsers
 subparser = parser.add_subparsers(help="sub-command help")
 
 # Create subparsers for the subcommands
-subparser_compile = subparser.add_parser("compile", aliases=["c"], help="Compile the typst file")
-subparser_watch = subparser.add_parser("watch", aliases=["w"], help="Watch the typst file")
+subparser_compile = subparser.add_parser(
+    "compile", aliases=["c"], help="Compile the typst file"
+)
+subparser_watch = subparser.add_parser(
+    "watch", aliases=["w"], help="Watch the typst file"
+)
 
 # Set the subparsers to call the appropriate function
 subparser_compile.set_defaults(func=_compile_wrapper)
