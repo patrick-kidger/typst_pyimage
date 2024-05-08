@@ -61,20 +61,24 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 2. Use these functions.
 
-    a. `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
+   a. `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
 
-    b. `pycontent(string)`. The positional string should be a Python program that produces a string on its final line. This string will be treated as Typst code.
+   b. `pycontent(string)`. The positional string should be a Python program that produces a string on its final line. This string will be treated as Typst code.
 
-    c. `pyinit(string)`. The positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup.
+   c. `pyinit(string)`. The positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup.
 
 3. Compile or watch. Run either of the following two commands:
-    ```
-    python -m typst_pyimage compile your_file.typ
-    python -m typst_pyimage watch your_file.typ
-    ```
-    This will extract and run all your Python code. In addition it will call either `typst compile your_file.typ` or `typst watch your_file.typ`.
 
-    The resulting images are saved in the `.typst_pyimage` folder.
+   ```
+   python -m typst_pyimage compile your_file.typ
+   python -m typst_pyimage watch your_file.typ
+   ```
+
+   This will extract and run all your Python code. In addition it will call either `typst compile your_file.typ` or `typst watch your_file.typ`.
+
+   The resulting images are saved in the `.typst_pyimage` folder.
+
+   For more information on the available arguments, run `python -m typst_pyimage -h`.
 
 ## Notes
 
@@ -83,6 +87,7 @@ It's common to have an initial block of code that is in common to all `#pyimage(
 Each `#pyimage("...")` block is executed as a fresh module (i.e. as if each was a separate Python file), but with the same Python interpreter.
 
 Overall, this is essentially equivalent to the following Python code:
+
 ```
 # main.py
 import pyinit
@@ -100,6 +105,7 @@ from pyinit import *
 from pyinit import *
 ...  # your second #pyimage("...") code
 ```
+
 This means that e.g. any global caches will be shared across all `#pyimage("...")` calls. (Useful when using a library like JAX, which has a JIT compilation cache.)
 
 ## Limitations
