@@ -156,11 +156,9 @@ def _initial(
 
 def watch(
     filename: Union[str, pathlib.Path],
-    extra_args: Optional[list[str]] = None,
+    extra_args: list[str],
     timeout_s: Optional[int] = None,
 ):
-    if extra_args is None:
-        extra_args = []
     figcache = {}
     contentcache = {}
     filepath, dirpath, init_code, init_scope = _initial(
@@ -190,8 +188,6 @@ def watch(
         process.kill()
 
 
-def compile(filename: Union[str, pathlib.Path], extra_args: Optional[list[str]] = None):
-    if extra_args is None:
-        extra_args = []
+def compile(filename: Union[str, pathlib.Path], extra_args: list[str]):
     filepath, _, _, _ = _initial(filename, figcache=None, contentcache=None)
     subprocess.run(["typst", "compile"] + extra_args + [str(filepath)])

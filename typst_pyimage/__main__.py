@@ -77,6 +77,7 @@ parser.add_argument(
     "-a",
     "--extra-args",
     type=str,
+    default="",
     help="Extra arguments to be passed to typst",
 )
 
