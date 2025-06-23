@@ -1,6 +1,6 @@
 import importlib.metadata
 
-from .run import compile as compile, watch as watch
+from ._run import run as run
 
 
 __version__ = importlib.metadata.version("typst_pyimage")

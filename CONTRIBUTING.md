@@ -15,15 +15,9 @@ Contributions (pull requests) are very welcome!
     pre-commit install
     ```
 
-3. Make your changes. Include additional tests if necessary.
+3. Make your changes.
 
-4. Verify the tests all pass:
-    ```bash
-    pip install -r tests/requirements.txt
-    pytest
-    ```
-
-5. Push your changes back to your fork of the repository:
+4. Push your changes back to your fork of the repository:
     ```bash
     git push
     ```

@@ -1,11 +1,30 @@
-#let pyimage_counter = counter("pyimage")
-#let pycontent_counter = counter("pycontent")
-#let pyinit(program) = {}
-#let pyimage(program, ..arguments) = {
-  pyimage_counter.step()
-  locate(loc => image(str(pyimage_counter.at(loc).at(0)) + ".png", ..arguments))
+#let pyinit(program) = {
+  metadata("typst_pyimage.pyinit." + program)
 }
-#let pycontent(program) = {
-  pycontent_counter.step()
-  locate(loc => eval(read(str(pycontent_counter.at(loc).at(0)) + ".txt")))
+#let mapping = json("mapping.json")
+#let pyimage(program, ..arguments) = {
+  metadata("typst_pyimage.pyimage." + program)
+  let i = 0
+  for (program_text, output_file) in mapping {
+    if program.match(program_text) != none {
+      i = i + 1
+      image(output_file, ..arguments)
+    }
+  }
+  if i != 1 {
+    panic("Got " + str(i) + " pyimage matches.")
+  }
+}
+#let pycontent(program, ..arguments) = {
+  metadata("typst_pyimage.pycontent." + program)
+  let i = 0
+  for (program_text, output_file) in mapping {
+    if program.match(program_text) != none {
+      i = i + 1
+      eval(read(output_file, ..arguments), mode: "markup")
+    }
+  }
+  if i != 1 {
+    panic("Got " + str(i) + " pyimage matches.")
+  }
 }
