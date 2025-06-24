@@ -3,15 +3,18 @@ import enum
 import hashlib
 import inspect
 import json
+import logging
 import pathlib
 import shutil
 import subprocess
+import time
 
 import matplotlib
 import matplotlib.pyplot as plt
 
 
 _here = pathlib.Path(__file__).resolve().parent
+_logger = logging.getLogger("typst_pyimage")
 
 
 class _OutputType(enum.Enum):
@@ -27,27 +30,44 @@ class _Output:
     type: _OutputType
 
 
-def run(filepath: pathlib.Path) -> None:
-    if not filepath.is_absolute():
-        raise RuntimeError("Must be provided with an absolute path to the file.")
+@dataclasses.dataclass(frozen=True)
+class _Result:
+    init_text: str
+    namespace: dict
+
+
+def _build(
+    filepath: pathlib.Path, old_init_text: str, old_namespace: dict, log_success: bool
+) -> None | _Result | Exception:
+    # Step 1: prepare the `.typst_pyimage` folder so that the Typst code is valid.
+    assert filepath.is_absolute()
     outdir = filepath.parent / ".typst_pyimage"
     outdir.mkdir(exist_ok=True)
     shutil.copy(_here / "pyimage.typ", outdir / "pyimage.typ")
-    mapping_file = outdir / "mapping.json"
-    if not mapping_file.exists():
-        mapping_file.write_text("{}")
 
+    # Step 2: Query Typst.
     p = subprocess.run(
-        ["typst", "query", str(filepath), "metadata"],
+        [
+            "typst",
+            "query",
+            str(filepath),
+            "metadata",
+            "--input",
+            "typst_pyimage.query=true",
+        ],
         capture_output=True,
         check=False,
         text=True,
     )
     if p.returncode != 0:
-        raise RuntimeError(f"stdout: {p.stdout}\nstderr: {p.stderr}")
+        return RuntimeError(f"stdout: {p.stdout}\nstderr: {p.stderr}")
+    if log_success:
+        _logger.info("Error resolved.")
     data = json.loads(p.stdout)
 
-    # Get the `pyinit` text.
+    # Step 3: Determine the desired state of the world.
+
+    # Step 3a: get the `pyinit` text.
     init_text: None | str = None
     for info in data:
         assert info["func"] == "metadata"
@@ -56,11 +76,11 @@ def run(filepath: pathlib.Path) -> None:
             if init_text is None:
                 init_text = value.removeprefix("typst_pyimage.pyinit.")
             else:
-                raise RuntimeError("Multiple `pyinit` statements found.")
+                return RuntimeError("Multiple `pyinit` statements found.")
     if init_text is None:
         init_text = ""
 
-    # Get the output texts, and the output files they will write to.
+    # Step 3b: get the output texts, and the output files they will write to.
     outputs: list[_Output] = []
     for info in data:
         value: str = info["value"]
@@ -89,27 +109,37 @@ def run(filepath: pathlib.Path) -> None:
                 )
             )
 
-    # Check if we need to run `pyinit` (or indeed anything at all).
-    all_found = True
-    for output in outputs:
-        if not (outdir / output.filename).exists():
-            all_found = False
-            break
-    if all_found:
-        return
+    # Step 4: check if we're aleady in that state of the world, and do nothing if so.
+    desired_filenames = {output.filename for output in outputs}
+    desired_filenames.add("pyimage.typ")
+    desired_filenames.add("mapping.json")
+    if all((outdir / filename).exists() for filename in desired_filenames):
+        return None
 
+    # Step 5: we're not in that state of the world. Make it so.
+
+    # Step 5a: delete what we don't need.
+    mapping_file = outdir / "mapping.json"
+    mapping_file.unlink(missing_ok=True)
     for existing_output_file in outdir.iterdir():
-        if existing_output_file != "pyimage.typ":
-            existing_output_file.unlink()
+        if existing_output_file.name not in desired_filenames:
+            # Tolerant to race condition with being deleted exogenously.
+            existing_output_file.unlink(missing_ok=True)
 
-    # Run `pyinit`.
-    namespace = {}
-    exec(init_text, namespace)
+    # Step 5b: run `pyinit` if needed. This is frequently expensive so we try not to do
+    # this if possible.
+    if init_text == old_init_text:
+        namespace = old_namespace
+    else:
+        _logger.info("Running `pyinit`.")
+        namespace = {}
+        exec(init_text, namespace)
 
-    # Run all outputs that need running.
+    # Step 5c: run all `pyimage` and `pycontent` blocks.
     for output in outputs:
         if (outdir / output.filename).exists():
             continue
+        _logger.info("Building output %s", output.filename)
         if output.type == _OutputType.content:
             content_value = eval(output.clean_text, namespace.copy())
             (outdir / output.filename).write_text(str(content_value))
@@ -122,5 +152,59 @@ def run(filepath: pathlib.Path) -> None:
             fig.savefig(outdir / output.filename)
         else:
             assert False
+
+    # Step 5d: built mapping file.
     mapping = {output.raw_text: output.filename for output in outputs}
     mapping_file.write_text(json.dumps(mapping))
+
+    return _Result(init_text, namespace)
+
+
+_spacer = "\n-----------------------"
+
+
+def compile(filepath: pathlib.Path, should_raise: bool) -> None:
+    out = _build(filepath, "", {}, log_success=False)
+    if out is None:
+        _logger.info("Nothing to do, already built.")
+    elif isinstance(out, Exception):
+        if should_raise:
+            raise out
+        else:
+            _logger.warning(str(out))
+    elif isinstance(out, _Result):
+        pass
+    else:
+        assert False
+
+
+def watch(filepath: pathlib.Path, should_raise: bool) -> None:
+    init_text = ""
+    namespace = {}
+    str_warning = None
+    log_success = False
+    first_build = True
+    while True:
+        out = _build(filepath, init_text, namespace, log_success)
+        if out is None:
+            if first_build:
+                _logger.info("Nothing to do, already built." + _spacer)
+        elif isinstance(out, Exception):
+            if should_raise:
+                raise out
+            else:
+                log_success = True
+                new_str_warning = str(out).strip()
+                if str_warning != new_str_warning:
+                    _logger.warning(new_str_warning + _spacer)
+                    str_warning = new_str_warning
+        elif isinstance(out, _Result):
+            init_text = out.init_text
+            namespace = out.namespace
+            log_success = False
+            str_warning = None
+            _logger.info("Built successfully." + _spacer)
+        else:
+            assert False
+        first_build = False
+        time.sleep(2)

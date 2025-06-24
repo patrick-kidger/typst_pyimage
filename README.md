@@ -57,17 +57,16 @@ This requires that you're using Typst locally -- it won't work with the web app.
 
 ## Usage
 
-From the command line, before Typst in order to build all the specified content:
-```
-python -m typst_pyimage your_file.typ
-typst compile your_file.typ
-```
-This will create a `.typst_pyimage/` directory with the built content.
+Usage is two steps. Write your content within the `.typ` file, and then run from the command line to build the content for Typst to actually import.
 
-From within your `.typ` file, import like so:
+**Within the `.typ` file:**
+
+Import like so (the file that is being imported from will be created automatically):
 ```typst
 #import ".typst_pyimage/pyimage.typ": pyinit, pycontent, pyimage
 ```
+
+With the following functions available:
 
 - `pyinit(string)`: the positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup. It can be called at most once.
 
@@ -75,18 +74,23 @@ From within your `.typ` file, import like so:
 
 - `pyimage(string, ..arguments) -> content`: the positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
 
+Each `pycontent` or `pyimage` call is assumed to be a deterministic function of (a) any string passed to `pyinit` and (b) the string passed to that individual `pycontent` or `pyimage` call. They will be re-evaluated if those change, and cached otherwise.
 
-## Caching, watching, rebuilding
+**Call from the command line:**
 
-The `python -m typst_pyimage your_file.typ` call assumes that the output of each `pycontent` or `pyimage` call is a deterministic function of any string passed to `pyinit` and the string passed to that individual `pycontent` or `pyimage` call. Each output is cached in the `.typst_pyimage/` folder. As such re-running will be fast when possible.
-
-This makes it possible to watch your document and keep the built PDF up to date with a command like so:
-```python
-watch -n 1 python -m typst_pyimage your_file.typ & typst watch your_file.typ
+To one-off compile:
 ```
-(Installing `watch` if necessary first, e.g. via `brew install watch` if on MacOS.)
+python -m typst_pyimage compile your_file.typ
+typst compile your_file.typ
+```
 
-## Python scoping rules
+To watch (run these in two separate terminals):
+```
+python -m typst_pyimage watch your_file.typ
+typst watch your_file.typ
+```
+
+**Python scoping rules**
 
 It's common to have an initial block of code that is in common to all `#pyimage("...")` and `#pycontent("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyinit("...")` directive.
 
