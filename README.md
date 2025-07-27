@@ -84,7 +84,7 @@ python -m typst_pyimage compile your_file.typ
 typst compile your_file.typ
 ```
 
-To watch (run these in two separate terminals):
+To watch (run these two commands at the same time):
 ```
 python -m typst_pyimage watch your_file.typ
 typst watch your_file.typ
