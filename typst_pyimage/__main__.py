@@ -28,4 +28,4 @@ try:
     else:
         assert False
 except KeyboardInterrupt:
-    sys.exit(1)
+    sys.exit(130)

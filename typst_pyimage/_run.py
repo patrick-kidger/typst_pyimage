@@ -36,14 +36,26 @@ class _Result:
     namespace: dict
 
 
+def _new_namespace(filepath: pathlib.Path) -> dict:
+    return {"__name__": "<dynamic in typst_pyimage>", "__file__": str(filepath)}
+
+
 def _build(
-    filepath: pathlib.Path, old_init_text: str, old_namespace: dict, log_success: bool
+    filepath: pathlib.Path,
+    old_init_text: str,
+    old_namespace: dict,
+    log_success: bool,
+    force_build: bool,
 ) -> None | _Result | Exception:
     # Step 1: prepare the `.typst_pyimage` folder so that the Typst code is valid.
     assert filepath.is_absolute()
     outdir = filepath.parent / ".typst_pyimage"
     outdir.mkdir(exist_ok=True)
-    shutil.copy(_here / "pyimage.typ", outdir / "pyimage.typ")
+    here_pyimage = _here / "pyimage.typ"
+    out_pyimage = outdir / "pyimage.typ"
+    if not out_pyimage.exists() or out_pyimage.read_text() != here_pyimage.read_text():
+        # Don't copy unconditionally, to avoid Typst recompiling unnecessarily.
+        shutil.copy(_here / "pyimage.typ", out_pyimage)
 
     # Step 2: Query Typst.
     p = subprocess.run(
@@ -113,14 +125,14 @@ def _build(
     desired_filenames = {output.filename for output in outputs}
     desired_filenames.add("pyimage.typ")
     desired_filenames.add("mapping.json")
-    if all((outdir / filename).exists() for filename in desired_filenames):
+    if not force_build and all(
+        (outdir / filename).exists() for filename in desired_filenames
+    ):
         return None
 
     # Step 5: we're not in that state of the world. Make it so.
 
     # Step 5a: delete what we don't need.
-    mapping_file = outdir / "mapping.json"
-    mapping_file.unlink(missing_ok=True)
     for existing_output_file in outdir.iterdir():
         if existing_output_file.name not in desired_filenames:
             # Tolerant to race condition with being deleted exogenously.
@@ -132,7 +144,7 @@ def _build(
         namespace = old_namespace
     else:
         _logger.info("Running `pyinit`.")
-        namespace = {}
+        namespace = _new_namespace(filepath)
         exec(init_text, namespace)
 
     # Step 5c: run all `pyimage` and `pycontent` blocks.
@@ -155,7 +167,7 @@ def _build(
 
     # Step 5d: built mapping file.
     mapping = {output.raw_text: output.filename for output in outputs}
-    mapping_file.write_text(json.dumps(mapping))
+    (outdir / "mapping.json").write_text(json.dumps(mapping))
 
     return _Result(init_text, namespace)
 
@@ -164,7 +176,9 @@ _spacer = "\n-----------------------"
 
 
 def compile(filepath: pathlib.Path, should_raise: bool) -> None:
-    out = _build(filepath, "", {}, log_success=False)
+    out = _build(
+        filepath, "", _new_namespace(filepath), log_success=False, force_build=False
+    )
     if out is None:
         _logger.info("Nothing to do, already built.")
     elif isinstance(out, Exception):
@@ -180,16 +194,15 @@ def compile(filepath: pathlib.Path, should_raise: bool) -> None:
 
 def watch(filepath: pathlib.Path, should_raise: bool) -> None:
     init_text = ""
-    namespace = {}
+    namespace = _new_namespace(filepath)
     str_warning = None
     log_success = False
     first_build = True
     while True:
-        out = _build(filepath, init_text, namespace, log_success)
-        if out is None:
-            if first_build:
-                _logger.info("Nothing to do, already built." + _spacer)
-        elif isinstance(out, Exception):
+        out = _build(
+            filepath, init_text, namespace, log_success, force_build=first_build
+        )
+        if isinstance(out, Exception):
             if should_raise:
                 raise out
             else:
@@ -198,13 +211,16 @@ def watch(filepath: pathlib.Path, should_raise: bool) -> None:
                 if str_warning != new_str_warning:
                     _logger.warning(new_str_warning + _spacer)
                     str_warning = new_str_warning
-        elif isinstance(out, _Result):
-            init_text = out.init_text
-            namespace = out.namespace
+        else:
             log_success = False
             str_warning = None
-            _logger.info("Built successfully." + _spacer)
-        else:
-            assert False
+            if out is None:
+                pass
+            elif isinstance(out, _Result):
+                init_text = out.init_text
+                namespace = out.namespace
+                _logger.info("Built successfully." + _spacer)
+            else:
+                assert False
         first_build = False
         time.sleep(2)

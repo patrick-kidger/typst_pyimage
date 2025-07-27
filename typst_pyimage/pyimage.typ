@@ -1,6 +1,5 @@
-#import sys
 #let (pyinit, pyimage, pycontent) = {
-  if sys.inputs.at("typst_pyimage.query") == "true" {
+  if sys.inputs.at("typst_pyimage.query", default: "false") == "true" {
 
     let pyinit(program) = {
       metadata("typst_pyimage.pyinit." + program)
