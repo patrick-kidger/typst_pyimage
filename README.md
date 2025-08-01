@@ -61,22 +61,24 @@ Usage is two steps. Write your content within the `.typ` file, and then run from
 
 **Within the `.typ` file:**
 
-Import like so (the file that is being imported from will be created automatically):
+Import like so (the `.typst_pyimage/pyimage.typ` file will be added in our next step):
 ```typst
 #import ".typst_pyimage/pyimage.typ": pyinit, pycontent, pyimage
 ```
 
-With the following functions available:
+It provides the following functions:
 
-- `pyinit(string)`: the positional string should be a Python program. This will be evaluated before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup. It can be called at most once.
+- `pyinit(string)`. The positional string should be a Python program. This will be evaluated once before all `pyimage` or `pycontent` calls, e.g. to perform imports or other setup.
 
-- `pycontent(string)`: the positional string should be a single Python expression. Its `str(...)` will be treated as Typst markup.
+- `pycontent(string)`. The positional string should be a single Python expression. When evaluated with a Python `str(...)`, the result will treated as Typst markup.
 
-- `pyimage(string, ..arguments) -> content`: the positional string should be a Python program that creates a single matplotlib figure. Any named arguments are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
+- `pyimage(string, ..arguments) -> content`. The positional string should be a Python program that creates a single matplotlib figure. Any additional `..arguments` are forwarded on to Typst's built-in `image` function. You can use it just like the normal `image` function, e.g. `#align(center, pyimage("..."))`.
 
-Each `pycontent` or `pyimage` call is assumed to be a deterministic function of (a) any string passed to `pyinit` and (b) the string passed to that individual `pycontent` or `pyimage` call. They will be re-evaluated if those change, and cached otherwise.
+Each `pycontent` or `pyimage` call is assumed to be a deterministic function of its string input (and that of the string passed to `pyinit` if it is used). The result will be cached, and only re-evaluated if that input changes.
 
 **Call from the command line:**
+
+Now it's time to run things!
 
 To one-off compile:
 ```
@@ -92,13 +94,11 @@ typst watch your_file.typ
 
 **Python scoping rules**
 
-It's common to have an initial block of code that is in common to all `#pyimage("...")` and `#pycontent("...")` calls (such as import statements, defining helpers etc). These can be placed in a `#pyinit("...")` directive.
-
-Each `#pyimage("...")` block is executed as a fresh module (i.e. as if each was a separate Python file), but with the same Python interpreter.
+Each `#pyinit("...")`, `#pycontent("...")` and `#pyimage("...")` block is executed as a fresh module (i.e. as if each was a separate Python file), but with the same Python interpreter.
 
 Overall, this is essentially equivalent to the following Python code:
 
-```
+```python
 # main.py
 import pyinit
 import pyimage1
@@ -116,4 +116,4 @@ from pyinit import *
 ...  # your second #pyimage("...") code
 ```
 
-This means that e.g. any values cached in Python will be shared across all `#pyimage("...")` calls. (Useful when using a library like JAX, which has a JIT compilation cache.)
+This means that e.g. any global state will be shared across all `#pyimage("...")` calls.
