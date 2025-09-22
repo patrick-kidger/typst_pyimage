@@ -172,7 +172,7 @@ def _build(
     return _Result(init_text, namespace)
 
 
-_spacer = "\n-----------------------"
+_spacer = "-----------------------"
 
 
 def compile(filepath: pathlib.Path, should_raise: bool) -> None:
@@ -209,18 +209,19 @@ def watch(filepath: pathlib.Path, should_raise: bool) -> None:
                 log_success = True
                 new_str_warning = str(out).strip()
                 if str_warning != new_str_warning:
-                    _logger.warning(new_str_warning + _spacer)
+                    _logger.warning(new_str_warning + "\n" + _spacer)
                     str_warning = new_str_warning
         else:
-            log_success = False
-            str_warning = None
             if out is None:
-                pass
+                if log_success:
+                    _logger.info(_spacer)
             elif isinstance(out, _Result):
                 init_text = out.init_text
                 namespace = out.namespace
-                _logger.info("Built successfully." + _spacer)
+                _logger.info("Built successfully.\n" + _spacer)
             else:
                 assert False
+            log_success = False
+            str_warning = None
         first_build = False
         time.sleep(2)
