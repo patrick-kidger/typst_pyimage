@@ -121,7 +121,7 @@ def _build(
                 )
             )
 
-    # Step 4: check if we're aleady in that state of the world, and do nothing if so.
+    # Step 4: check if we're already in that state of the world, and do nothing if so.
     desired_filenames = {output.filename for output in outputs}
     desired_filenames.add("pyimage.typ")
     desired_filenames.add("mapping.json")
