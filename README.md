@@ -53,6 +53,12 @@ _(This example uses [JAX](https://github.com/google/jax) and [Diffrax](https://g
 pip install typst_pyimage
 ```
 
+Alternatively, if you have [uv](https://docs.astral.sh/uv/) installed, 
+
+```
+uv tool install typst_pyimage
+```
+
 This requires that you're using Typst locally -- it won't work with the web app.
 
 ## Usage
