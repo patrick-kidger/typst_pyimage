@@ -24,6 +24,9 @@ requires-python = "~=3.8"
 urls = {repository = "https://github.com/patrick-kidger/typst_pyimage"}
 version = "0.1.1"
 
+[project.scripts]
+typst_pyimage = "typst_pyimage.__main__:main"
+
 [tool.hatch.build]
 include = ["typst_pyimage/*"]
 
